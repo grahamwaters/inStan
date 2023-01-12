@@ -5,6 +5,13 @@ import logging
 import random
 import csv
 
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+
 # Read config from config.json
 with open("config/config.json") as config_file:
     config = json.load(config_file)
@@ -32,31 +39,95 @@ def login(driver, username, password):
     driver.get("https://www.instagram.com/accounts/login/")
     # step 2: enter username
     # find username input field
-    username_input = driver.find_element_by_name("username")
+    # wait till the username input field is visible on the page using EC
+    username_input = WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.NAME, "username")) )
     # enter username
     username_input.send_keys(username)
     # step 3: enter password
-    # find password input field
-    password_input = driver.find_element_by_name("password")
+    # find password input field using By.NAME, "password" using EC
+    password_input = WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.NAME, "password")) )
     # enter password
+
     time.sleep(random.randint(1, 3))
     password_input.send_keys(password)
     # step 4: click login button
-    # find login button
-    login_button = driver.find_element_by_xpath("//button[@type='submit']")
+    # find login button with the same method as above
+    login_button = WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.XPATH, "//button[@type='submit']")) )
     # click login button
     time.sleep(random.randint(1, 6))
     login_button.click()
     # step 5: wait for login to complete
-    time.sleep(5)
+    # wait for the page to load
 
-def read_account_handles():
-    handles = []
-    with open('accounts_to_stan.csv', 'r') as csvfile:
-        accounts_reader = csv.reader(csvfile, delimiter=',')
-        for row in accounts_reader:
-            handles.append(row[0])
-    return handles
+    while True:
+        try:
+            WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.XPATH, "//button[text()='Not Now']")) )
+            break
+        except:
+            pass
+    # step 6: click "Not Now" button
+    # find "Not Now" button
+    not_now_button = WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.XPATH, "//button[text()='Not Now']")) )
+    # click "Not Now" button
+    time.sleep(random.randint(1, 6))
+    not_now_button.click()
+    # step 7: wait for the page to load
+    # wait for the page to load
+    # if the not now button is not present, then the page has loaded, else click the not now button and wait for the page to load
+    while True:
+        try:
+            WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.XPATH, "//button[text()='Not Now']")) )
+            not_now_button = WebDriverWait(driver, 10).until( EC.presence_of_element_located((By.XPATH, "//button[text()='Not Now']")) )
+            time.sleep(random.randint(1, 6))
+            not_now_button.click()
+        except:
+            break
+
+    #& At this point the user is logged in to Instagram and the page has loaded
+    # it's time to start the bot
+    # extract the top post from the feed and like it, then repost it to the user's own profile with a caption that has the format below. The caption should include the account's handle.
+    # caption format: "Repost from @<account handle> <account's caption>"
+    # user name is the username of the top post on the user's feed
+    # username = "username"
+    # repost_top_post(driver, username)
+
+    repost_top_post(driver, username)
+
+
+
+def repost_top_post(driver, handle):
+    # Find the first post on the user's profile
+    first_post = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div._9AhH0")))
+    first_post.click()
+    time.sleep(random.randint(1, 3))
+    # find caption of the post
+    caption = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//div[@class='C4VMK']/span"))).text
+    # find like button
+    like_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//a[@class='_8-yf5 ']/span[1]")))
+    like_button.click()
+    time.sleep(random.randint(1, 3))
+    # find share button
+    share_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[text()='Share']")))
+    share_button.click()
+    time.sleep(random.randint(1, 8))
+    # find share to profile button
+    share_to_profile_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[text()='Share to Profile']")))
+    share_to_profile_button.click()
+    time.sleep(random.randint(1, 3))
+    # find caption input field
+    caption_input = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//textarea[@aria-label='Write a caption…']")))
+    caption_input.send_keys(f"Repost from @{handle} {caption}")
+    time.sleep(random.randint(1, 6))
+    # find share button
+    share_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[text()='Share']")))
+    share_button.click()
+    time.sleep(random.randint(1, 10))
+    # find close button
+    close_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[text()='Close']")))
+    close_button.click()
+    time.sleep(random.randint(1, 7))
+
+
 
 
 # Repost content from target account
